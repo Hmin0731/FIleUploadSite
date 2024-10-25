@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엑셀 보고서가 성공적으로 생성되었습니다.</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js 라이브러리 -->
+    
+</head>
+<body>
+    <h1></h1>
+    
+    <form action="/upload" method="get" >
+    	
+        <button type="reset"><h4> home 복귀 </h4></button>
+    </form>
+    
+        
+    
+    
+    
+    <p th:text="${message}"></p>
+    
+    </body>
+    
+</html>
+
+

@@ -1,0 +1,1472 @@
+package com.example.file_upload_site.service;
+
+
+
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.BorderStyle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
+
+import javax.sql.DataSource;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFCell;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFFont;
+import org.apache.poi.xssf.usermodel.XSSFRow;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFDrawing;
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
+import org.apache.poi.xssf.usermodel.XSSFChart;
+
+import org.apache.poi.xddf.usermodel.chart.*;
+
+import org.apache.poi.xssf.usermodel.*;
+
+
+
+@Service
+public class ReportService {
+
+    @Autowired
+    private DataSource dataSource;
+
+    
+    
+
+    
+    private static final Logger logger = LoggerFactory.getLogger(ReportService.class);
+    
+    // Gmarket 보고서 삽입 메서드들
+    public void insertGmarketProductReport(MultipartFile file, String advertiserId) throws IOException, SQLException {
+
+        try (Connection connection = dataSource.getConnection(); // 데이터소스에서 커넥션 가져오기
+                PreparedStatement statement = connection.prepareStatement(
+                		"INSERT INTO GmarketProductReport (Site, AdProductNumber, RelatedProductNumber, Impressions, Clicks, ClickThroughRate, AvgImpressionRank, AvgClickCost, TotalCost, Purchases, PurchaseAmount, ConversionRate, ReturnOnAdSpend, AdvertiserId) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);")) {
+
+               // 엑셀 파일에서 데이터를 읽기
+        	  Workbook workbook = WorkbookFactory.create(file.getInputStream());
+              Sheet sheet = workbook.getSheetAt(0); // 첫 번째 시트 선택
+              List<Row> rows = new ArrayList<>(); // 행을 저장할 리스트
+
+              for (int i = 1; i <= sheet.getLastRowNum(); i++) { // 첫 번째 행은 헤더라고 가정하고 1부터 시작
+                  Row row = sheet.getRow(i);
+                  if (row != null) {
+                      rows.add(row); // 행 추가
+                  }
+              }
+
+               // 각 행에 대해 데이터베이스에 삽입
+              for (Row row : rows) {
+            	  statement.setString(1, row.getCell(0).getStringCellValue()); 
+                  statement.setString(2, row.getCell(1).getStringCellValue());
+                  statement.setString(3, row.getCell(2).getStringCellValue());
+                  statement.setDouble(4, row.getCell(3).getNumericCellValue());
+                  statement.setDouble(5, row.getCell(4).getNumericCellValue());
+                  statement.setDouble(6, row.getCell(5).getNumericCellValue());
+                  statement.setDouble(7, row.getCell(6).getNumericCellValue());
+                  statement.setDouble(8, row.getCell(7).getNumericCellValue());
+                  statement.setDouble(9, row.getCell(8).getNumericCellValue());
+                  statement.setDouble(10, row.getCell(9).getNumericCellValue());
+                  statement.setDouble(11, row.getCell(10).getNumericCellValue());
+                  statement.setDouble(12, row.getCell(11).getNumericCellValue());
+                  statement.setDouble(13, row.getCell(12).getNumericCellValue());
+                  statement.setString(14, advertiserId); // AdvertiserId 추가
+                  
+                  // SQL 실행
+                  statement.executeUpdate();
+              }
+              	logger.info("Gmarket 상품별 보고서 삽입 성공");
+        } 		catch (SQLException e) {
+            	logger.error("Gmarket 상품별 보고서 삽입 실패: " + e.getMessage());
+            	throw e; // 예외를 다시 던져 호출자에게 알림      
+        
+        }
+        
+    }
+
+
+    public void insertGmarketDatewiseReport(MultipartFile file, String advertiserId) throws IOException, SQLException {
+//        insertGmarketReport(file, "GmarketDatewiseReport"); // Gmarket 일자별
+        
+       
+        
+        try (Connection connection = dataSource.getConnection(); // 데이터소스에서 커넥션 가져오기
+                PreparedStatement statement = connection.prepareStatement(
+                		"INSERT INTO GmarketDatewiseReport (ReportDate, Impressions,Clicks,ClickThroughRate,AvgImpressionRank,AvgClickCost,TotalCost,Purchases,PurchaseAmount,ConversionRate,ReturnOnAdSpend,AdvertiserId) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );")
+                		
+                		) {
+
+               // 엑셀 파일에서 데이터를 읽기
+               Workbook workbook = WorkbookFactory.create(file.getInputStream());
+               Sheet sheet = workbook.getSheetAt(0); // 첫 번째 시트 선택
+               List<Row> rows = new ArrayList<>(); // 행을 저장할 리스트
+
+               for (int i = 1; i <= sheet.getLastRowNum(); i++) { // 첫 번째 행은 헤더라고 가정하고 1부터 시작
+                   Row row = sheet.getRow(i);
+                   if (row != null) {
+                       rows.add(row); // 행 추가
+                   }
+               }
+
+               // 각 행에 대해 데이터베이스에 삽입
+               for (Row row : rows) {
+            	// PreparedStatement에 파라미터 설정
+               
+               java.util.Date utilDate = row.getCell(0).getDateCellValue(); // java.util.Date 가져오기
+               java.sql.Date sqlDate = new java.sql.Date(utilDate.getTime()); // java.sql.Date로 변환
+               statement.setDate(1, sqlDate); // 변환한 날짜를 설정
+               statement.setDouble(2, row.getCell(1).getNumericCellValue());
+               statement.setDouble(3, row.getCell(2).getNumericCellValue());
+               statement.setDouble(4, row.getCell(3).getNumericCellValue());
+               statement.setDouble(5, row.getCell(4).getNumericCellValue());
+               statement.setDouble(6, row.getCell(5).getNumericCellValue());
+               statement.setDouble(7, row.getCell(6).getNumericCellValue());
+               statement.setDouble(8, row.getCell(7).getNumericCellValue());
+               statement.setDouble(9, row.getCell(8).getNumericCellValue());
+               statement.setDouble(10, row.getCell(9).getNumericCellValue());
+               statement.setDouble(11, row.getCell(10).getNumericCellValue());
+               statement.setString(12, advertiserId); // AdvertiserId 추가
+               // SQL 실행
+               statement.executeUpdate();
+               }
+               	logger.info("Gmarket 일자별 보고서 삽입 성공");
+        	} 	catch (SQLException e) {
+        		logger.error("Gmarket 일자별 보고서 삽입 실패: " + e.getMessage());
+        		throw e; // 예외를 다시 던져 호출자에게 알림
+        }
+    }
+
+    public void insertGmarketKeywordReport(MultipartFile file, String advertiserId) throws IOException, SQLException {
+//        insertGmarketReport(file, "GmarketKeywordReport"); // Gmarket 키워드별
+        
+       
+        
+        try (Connection connection = dataSource.getConnection(); // 데이터소스에서 커넥션 가져오기
+                PreparedStatement statement = connection.prepareStatement(
+                		"INSERT INTO GmarketKeywordReport (Keyword,Impressions,Clicks,ClickThroughRate,AvgImpressionRank,AvgClickCost,TotalCost,Purchases,PurchaseAmount,ConversionRate,ReturnOnAdSpend,AdvertiserId	) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );")
+                		){
+
+               // 엑셀 파일에서 데이터를 읽기
+               Workbook workbook = WorkbookFactory.create(file.getInputStream());
+               Sheet sheet = workbook.getSheetAt(0); // 첫 번째 시트 선택
+               List<Row> rows = new ArrayList<>(); // 행을 저장할 리스트
+
+               for (int i = 1; i <= sheet.getLastRowNum(); i++) { // 첫 번째 행은 헤더라고 가정하고 1부터 시작
+                   Row row = sheet.getRow(i);
+                   if (row != null) {
+                       rows.add(row); // 행 추가
+                   }
+               }
+
+               // 각 행에 대해 데이터베이스에 삽입
+               for (Row row : rows) {
+                   // PreparedStatement에 파라미터 설정
+               statement.setString(1, row.getCell(0).getStringCellValue()); 
+               statement.setDouble(2, row.getCell(1).getNumericCellValue());
+               statement.setDouble(3, row.getCell(2).getNumericCellValue());
+               statement.setDouble(4, row.getCell(3).getNumericCellValue());
+               statement.setDouble(5, row.getCell(4).getNumericCellValue());
+               statement.setDouble(6, row.getCell(5).getNumericCellValue());
+               statement.setDouble(7, row.getCell(6).getNumericCellValue());
+               statement.setDouble(8, row.getCell(7).getNumericCellValue());
+               statement.setDouble(9, row.getCell(8).getNumericCellValue());
+               statement.setDouble(10, row.getCell(9).getNumericCellValue());
+               statement.setDouble(11, row.getCell(10).getNumericCellValue());
+               statement.setString(12, advertiserId); // AdvertiserId 추가
+               // SQL 실행
+               statement.executeUpdate();
+               }
+               	logger.info("Gmarket 키워드별 보고서 삽입 성공");
+        	} 	catch (SQLException e) {
+        		logger.error("Gmarket 키워드별 보고서 삽입 실패: " + e.getMessage());
+        		throw e; // 예외를 다시 던져 호출자에게 알림
+           }
+    }
+
+    // Auction 보고서 삽입 메서드들
+    public void insertAuctionProductReport(MultipartFile file, String advertiserId) throws IOException, SQLException {
+//        insertAuctionReport(file, "AuctionProductReport"); // Auction 상품별
+        
+     
+        
+        
+        try (Connection connection = dataSource.getConnection(); // 데이터소스에서 커넥션 가져오기
+                PreparedStatement statement = connection.prepareStatement(
+                		"INSERT INTO AuctionProductReport (Site, AdProductNumber, RelatedProductNumber, Impressions, Clicks, ClickThroughRate, AvgImpressionRank, AvgClickCost, TotalCost, Purchases, PurchaseAmount, ConversionRate, ReturnOnAdSpend, AdvertiserId) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);")) {
+
+               // 엑셀 파일에서 데이터를 읽기
+               Workbook workbook = WorkbookFactory.create(file.getInputStream());
+               Sheet sheet = workbook.getSheetAt(0); // 첫 번째 시트 선택
+               List<Row> rows = new ArrayList<>(); // 행을 저장할 리스트
+
+               for (int i = 1; i <= sheet.getLastRowNum(); i++) { // 첫 번째 행은 헤더라고 가정하고 1부터 시작
+                   Row row = sheet.getRow(i);
+                   if (row != null) {
+                       rows.add(row); // 행 추가
+                   }
+               }
+
+               // 각 행에 대해 데이터베이스에 삽입
+               for (Row row : rows) {
+                   // PreparedStatement에 파라미터 설정
+               statement.setString(1, row.getCell(0).getStringCellValue()); 
+               statement.setString(2, row.getCell(1).getStringCellValue());
+               statement.setString(3, row.getCell(2).getStringCellValue());
+               statement.setDouble(4, row.getCell(3).getNumericCellValue());
+               statement.setDouble(5, row.getCell(4).getNumericCellValue());
+               statement.setDouble(6, row.getCell(5).getNumericCellValue());
+               statement.setDouble(7, row.getCell(6).getNumericCellValue());
+               statement.setDouble(8, row.getCell(7).getNumericCellValue());
+               statement.setDouble(9, row.getCell(8).getNumericCellValue());
+               statement.setDouble(10, row.getCell(9).getNumericCellValue());
+               statement.setDouble(11, row.getCell(10).getNumericCellValue());
+               statement.setDouble(12, row.getCell(11).getNumericCellValue());
+               statement.setDouble(13, row.getCell(12).getNumericCellValue());
+               statement.setString(14, advertiserId); // AdvertiserId 추가
+               // SQL 실행
+               statement.executeUpdate();
+               }
+               	logger.info("Auction 상품별 보고서 삽입 성공");
+        	} 	catch (SQLException e) {
+        		logger.error("Auction 상품별 보고서 삽입 실패: " + e.getMessage());
+        		throw e; // 예외를 다시 던져 호출자에게 알림
+               
+           }
+    }
+
+    public void insertAuctionDatewiseReport(MultipartFile file, String advertiserId) throws IOException, SQLException {
+//        insertAuctionReport(file, "AuctionDatewiseReport"); // Auction 일자별
+        
+               
+        try (Connection connection = dataSource.getConnection(); // 데이터소스에서 커넥션 가져오기
+                PreparedStatement statement = connection.prepareStatement(
+                		"INSERT INTO AuctionDatewiseReport (ReportDate,Impressions,Clicks,ClickThroughRate,AvgImpressionRank,AvgClickCost,TotalCost,Purchases,PurchaseAmount,ConversionRate,ReturnOnAdSpend,AdvertiserId) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );")) {
+               // 엑셀 파일에서 데이터를 읽기
+               Workbook workbook = WorkbookFactory.create(file.getInputStream());
+               Sheet sheet = workbook.getSheetAt(0); // 첫 번째 시트 선택
+               List<Row> rows = new ArrayList<>(); // 행을 저장할 리스트
+
+               for (int i = 1; i <= sheet.getLastRowNum(); i++) { // 첫 번째 행은 헤더라고 가정하고 1부터 시작
+                   Row row = sheet.getRow(i);
+                   if (row != null) {
+                       rows.add(row); // 행 추가
+                   }
+               }
+
+               // 각 행에 대해 데이터베이스에 삽입
+               for (Row row : rows) {
+            	   java.util.Date utilDate1 = row.getCell(0).getDateCellValue(); // java.util.Date 가져오기
+                   java.sql.Date sqlDate1 = new java.sql.Date(utilDate1.getTime()); // java.sql.Date로 변환
+                   statement.setDate(1, sqlDate1); // 변환한 날짜를 설정
+                   statement.setDouble(2, row.getCell(1).getNumericCellValue());
+                   statement.setDouble(3, row.getCell(2).getNumericCellValue());
+                   statement.setDouble(4, row.getCell(3).getNumericCellValue());
+                   statement.setDouble(5, row.getCell(4).getNumericCellValue());
+                   statement.setDouble(6, row.getCell(5).getNumericCellValue());
+                   statement.setDouble(7, row.getCell(6).getNumericCellValue());
+                   statement.setDouble(8, row.getCell(7).getNumericCellValue());
+                   statement.setDouble(9, row.getCell(8).getNumericCellValue());
+                   statement.setDouble(10, row.getCell(9).getNumericCellValue());
+                   statement.setDouble(11, row.getCell(10).getNumericCellValue());
+                   statement.setString(12, advertiserId); // AdvertiserId 추가
+                   // SQL 실행
+                   statement.executeUpdate();
+                   }
+                   	logger.info("Auction 일자별 보고서 삽입 성공");
+            	} 	catch (SQLException e) {
+            		logger.error("Auction 일자별 보고서 삽입 실패: " + e.getMessage());
+            		throw e; // 예외를 다시 던져 호출자에게 알림
+           }
+    }
+
+    public void insertAuctionKeywordReport(MultipartFile file, String advertiserId) throws IOException, SQLException {
+//        insertAuctionReport(file, "AuctionKeywordReport"); // Auction 키워드별
+        
+      
+        try (Connection connection = dataSource.getConnection(); // 데이터소스에서 커넥션 가져오기
+                PreparedStatement statement = connection.prepareStatement(
+                		"INSERT INTO AuctionKeywordReport (Keyword,Impressions,Clicks,ClickThroughRate,AvgImpressionRank,AvgClickCost,TotalCost,Purchases,PurchaseAmount,ConversionRate,ReturnOnAdSpend,AdvertiserId	) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );")
+                		){
+
+               // 엑셀 파일에서 데이터를 읽기
+               Workbook workbook = WorkbookFactory.create(file.getInputStream());
+               Sheet sheet = workbook.getSheetAt(0); // 첫 번째 시트 선택
+               List<Row> rows = new ArrayList<>(); // 행을 저장할 리스트
+
+               for (int i = 1; i <= sheet.getLastRowNum(); i++) { // 첫 번째 행은 헤더라고 가정하고 1부터 시작
+                   Row row = sheet.getRow(i);
+                   if (row != null) {
+                       rows.add(row); // 행 추가
+                   }
+               }
+
+               // 각 행에 대해 데이터베이스에 삽입
+               for (Row row : rows) {
+            	   statement.setString(1, row.getCell(0).getStringCellValue()); 
+                   statement.setDouble(2, row.getCell(1).getNumericCellValue());
+                   statement.setDouble(3, row.getCell(2).getNumericCellValue());
+                   statement.setDouble(4, row.getCell(3).getNumericCellValue());
+                   statement.setDouble(5, row.getCell(4).getNumericCellValue());
+                   statement.setDouble(6, row.getCell(5).getNumericCellValue());
+                   statement.setDouble(7, row.getCell(6).getNumericCellValue());
+                   statement.setDouble(8, row.getCell(7).getNumericCellValue());
+                   statement.setDouble(9, row.getCell(8).getNumericCellValue());
+                   statement.setDouble(10, row.getCell(9).getNumericCellValue());
+                   statement.setDouble(11, row.getCell(10).getNumericCellValue());
+                   statement.setString(12, advertiserId); // AdvertiserId 추가
+                   // SQL 실행
+                   statement.executeUpdate();
+                   }
+                   	logger.info("Auction 키워드별 보고서 삽입 성공");
+            	} 	catch (SQLException e) {
+            		logger.error("Auction 키워드별 보고서 삽입 실패: " + e.getMessage());
+            		throw e; // 예외를 다시 던져 호출자에게 알림
+            	   
+           }
+        
+    }
+
+    	// DataSource를 주입받기 위한 생성자
+    	public ReportService(DataSource dataSource) {
+        this.dataSource = dataSource;
+    	}
+    	
+    	
+
+        public void generateExcelReport(Connection connection, String advertiserId) {
+        	// 엑셀 워크북 생성
+        	XSSFWorkbook workbook = new XSSFWorkbook();
+        	
+        	
+        	
+            XSSFSheet sheet1 = workbook.createSheet("월간 합산 Summary");
+            XSSFSheet sheet2 = workbook.createSheet("G마켓 일자별 통계");
+            XSSFSheet sheet3 = workbook.createSheet("옥션 일자별 통계");
+            XSSFSheet sheet4 = workbook.createSheet("월간_상품별_지마켓");
+            XSSFSheet sheet5 = workbook.createSheet("월간_상품별_옥션");
+            XSSFSheet sheet6 = workbook.createSheet("월간_키워드별_지마켓");
+            XSSFSheet sheet7 = workbook.createSheet("월간_키워드별_옥션");
+ 
+            // 그리드라인 비활성화
+            sheet1.setDisplayGridlines(false);
+            sheet2.setDisplayGridlines(false);
+            sheet3.setDisplayGridlines(false);
+            sheet4.setDisplayGridlines(false);
+            sheet5.setDisplayGridlines(false);
+            sheet6.setDisplayGridlines(false);
+            sheet7.setDisplayGridlines(false);
+            
+            // 각 시트에 타이틀 추가
+            addTitle01(sheet1, "월간 합산 Summary");
+            addTitle01(sheet2, "G마켓 일자별 통계");
+            addTitle01(sheet3, "옥션 일자별 통계");
+            addTitle02(sheet4, "월간_상품별_지마켓");
+            addTitle02(sheet5, "월간_상품별_옥션");
+            addTitle01(sheet6, "월간_키워드별_지마켓");
+            addTitle01(sheet7, "월간_키워드별_옥션");
+
+            
+
+
+        	// DataFormat 생성
+        	DataFormat format = workbook.createDataFormat();  // DataFormat을 Workbook에서 가져와야 함
+
+       	 	// 쉼표 형식 (예: 1,000,000)
+        	XSSFCellStyle commaStyle = workbook.createCellStyle();
+        	commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+        	// 퍼센트 형식 (예: 50.00%)
+	        XSSFCellStyle percentStyle = workbook.createCellStyle();
+	        percentStyle.setDataFormat(format.getFormat("0.00%"));
+
+
+
+            
+
+            
+// 클릭률 차트 ==================================================================================
+            // 차트가 들어갈 위치 설정
+            XSSFDrawing drawing = sheet1.createDrawingPatriarch();
+            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 13, 1, 21, 11);	
+
+            // 차트 생성
+            XSSFChart chart = drawing.createChart(anchor);
+            chart.setTitleText("클릭수");
+            chart.setTitleOverlay(false);
+
+            // 축 설정 (카테고리 축 및 값 축)
+            XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
+            bottomAxis.setTitle(""); // X축 제목
+            XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
+            leftAxis.setTitle(""); // Y축 제목
+
+            // 데이터 소스 지정 (X축, Y축)
+            XDDFDataSource<Double> xAxis = XDDFDataSourcesFactory.fromNumericCellRange(sheet1, new CellRangeAddress(3, 33, 1, 1));		//		위에서부터 3번째 행 다음 부터 34번째 행 까지 1번 열  다음 부터  1개 열까지(포함)
+            XDDFNumericalDataSource<Double> yAxis = XDDFDataSourcesFactory.fromNumericCellRange(sheet1, new CellRangeAddress(3, 33, 3, 3));	//  위에서부터 3번째 행 다음 부터 34번째 행 까지 2번 열  다음 부터  2개 열까지(포함)
+//            첫 번째 인자: 시작 행 인덱스 (0)
+//            두 번째 인자: 끝 행 인덱스 (30)
+//            세 번째 인자: 시작 열 인덱스 (0)
+//            네 번째 인자: 끝 열 인덱스 (0)
+
+            
+            // 차트 데이터
+            XDDFLineChartData data = (XDDFLineChartData) chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
+            XDDFLineChartData.Series series = (XDDFLineChartData.Series) data.addSeries(xAxis, yAxis);
+            series.setTitle("Data", null);
+            series.setSmooth(false);  // 매끄럽지 않은 라인
+            series.setMarkerStyle(MarkerStyle.DOT);  // 점선 스타일 지정
+
+            chart.plot(data);
+// 총비용 차트 ==================================================================================           
+            // 차트가 들어갈 위치 설정
+            XSSFDrawing drawing1 = sheet1.createDrawingPatriarch();
+            XSSFClientAnchor anchor1 = drawing1.createAnchor(0, 0, 0, 0, 13, 12, 21, 22);	
+
+            // 차트 생성
+            XSSFChart chart1 = drawing1.createChart(anchor1);
+            chart1.setTitleText("총비용");
+            chart1.setTitleOverlay(false);
+
+            // 축 설정 (카테고리 축 및 값 축)
+            XDDFCategoryAxis bottomAxis1 = chart1.createCategoryAxis(AxisPosition.BOTTOM);
+            bottomAxis1.setTitle(""); // X축 제목
+            XDDFValueAxis leftAxis1 = chart1.createValueAxis(AxisPosition.LEFT);
+            leftAxis1.setTitle(""); // Y축 제목
+
+            // 데이터 소스 지정 (X축, Y축)
+            XDDFDataSource<Double> xAxis1 = XDDFDataSourcesFactory.fromNumericCellRange(sheet1, new CellRangeAddress(3, 33, 1, 1));		//		위에서부터 3번째 행 다음 부터 34번째 행 까지 1번 열  다음 부터  1개 열까지(포함)
+            XDDFNumericalDataSource<Double> yAxis1 = XDDFDataSourcesFactory.fromNumericCellRange(sheet1, new CellRangeAddress(3, 33, 8, 8));	//  위에서부터 3번째 행 다음 부터 34번째 행 까지 2번 열  다음 부터  2개 열까지(포함)
+//            첫 번째 인자: 시작 행 인덱스 (0)
+//            두 번째 인자: 끝 행 인덱스 (30)
+//            세 번째 인자: 시작 열 인덱스 (0)
+//            네 번째 인자: 끝 열 인덱스 (0)
+
+            
+            // 차트 데이터
+            XDDFLineChartData data1 = (XDDFLineChartData) chart1.createData(ChartTypes.LINE, bottomAxis1, leftAxis1);
+            XDDFLineChartData.Series series1 = (XDDFLineChartData.Series) data1.addSeries(xAxis1, yAxis1);
+            series1.setTitle("Data", null);
+            series1.setSmooth(false);  // 매끄럽지 않은 라인
+            series1.setMarkerStyle(MarkerStyle.DOT);  // 점선 스타일 지정
+
+            chart.plot(data1);
+// 전환금액 차트 ==================================================================================
+            // 차트가 들어갈 위치 설정
+            XSSFDrawing drawing2 = sheet1.createDrawingPatriarch();
+            XSSFClientAnchor anchor2 = drawing2.createAnchor(0, 0, 0, 0, 13, 23, 21, 33);	
+
+            // 차트 생성
+            XSSFChart chart2 = drawing2.createChart(anchor2);
+            chart2.setTitleText("광고수익률");
+            chart2.setTitleOverlay(false);
+
+            // 축 설정 (카테고리 축 및 값 축)
+            XDDFCategoryAxis bottomAxis2 = chart2.createCategoryAxis(AxisPosition.BOTTOM);
+            bottomAxis2.setTitle(""); // X축 제목
+            XDDFValueAxis leftAxis2 = chart2.createValueAxis(AxisPosition.LEFT);
+            leftAxis2.setTitle(""); // Y축 제목
+
+            // 데이터 소스 지정 (X축, Y축)
+            XDDFDataSource<Double> xAxis2 = XDDFDataSourcesFactory.fromNumericCellRange(sheet1, new CellRangeAddress(3, 33, 1, 1));		//		위에서부터 3번째 행 다음 부터 34번째 행 까지 1번 열  다음 부터  1개 열까지(포함)
+            XDDFNumericalDataSource<Double> yAxis2 = XDDFDataSourcesFactory.fromNumericCellRange(sheet1, new CellRangeAddress(3, 33, 11, 11));	//  위에서부터 3번째 행 다음 부터 34번째 행 까지 2번 열  다음 부터  2개 열까지(포함)
+//            첫 번째 인자: 시작 행 인덱스 (0)
+//            두 번째 인자: 끝 행 인덱스 (30)
+//            세 번째 인자: 시작 열 인덱스 (0)
+//            네 번째 인자: 끝 열 인덱스 (0)
+
+            
+            // 차트 데이터
+            XDDFLineChartData data2 = (XDDFLineChartData) chart2.createData(ChartTypes.LINE, bottomAxis2, leftAxis2);
+            XDDFLineChartData.Series series2 = (XDDFLineChartData.Series)  data2.addSeries(xAxis2, yAxis2);
+            series2.setTitle("Data", null);
+            series2.setSmooth(false);  // 매끄럽지 않은 라인
+            series2.setMarkerStyle(MarkerStyle.DOT);  // 점선 스타일 지정
+
+            chart2.plot(data2);
+//  ==================================================================================           
+            
+            
+        
+            
+         
+            try {
+                // G마켓,옥션 일자별 통계
+                String sql1 = "SELECT GDR.ReportDate AS '구분', 												" 
+                            + "CAST(AVG((GDR.Impressions + ADR.Impressions) / 2.0) AS INT) AS '노출수', 		"
+                            + "CAST(AVG((GDR.Clicks + ADR.Clicks) / 2.0) AS INT) AS '클릭수', 				"
+                            + "AVG((GDR.ClickThroughRate + ADR.ClickThroughRate) / 2.0) AS '클릭률', 			"
+                            + "AVG((GDR.AvgClickCost + ADR.AvgClickCost) / 2.0) AS '평균클릭비용', 				"
+                            + "AVG((GDR.AvgImpressionRank + ADR.AvgImpressionRank) / 2.0) AS '평균노출순위', 	"
+                            + "CAST(AVG((GDR.Purchases + ADR.Purchases) / 2.0) AS INT) AS '구매수', 			"
+                            + "CAST(AVG((GDR.TotalCost + ADR.TotalCost) / 2.0) AS INT) AS '총비용', 			"
+                            + "AVG((GDR.PurchaseAmount + ADR.PurchaseAmount) / 2.0) AS '구매금액', 			"
+                            + "AVG((GDR.ConversionRate + ADR.ConversionRate) / 2.0) AS '전환율', 				"
+                            + "AVG((GDR.ReturnOnAdSpend + ADR.ReturnOnAdSpend) / 2.0) AS '광고수익률' 			"
+                            + "FROM GmarketDatewiseReport AS GDR 											"
+                            + "INNER JOIN AuctionDatewiseReport AS ADR ON GDR.ReportDate = ADR.ReportDate 	"
+                            + "WHERE GDR.AdvertiserId LIKE ? 												"
+                            + "GROUP BY GDR.ReportDate;";
+                addDataToSheet1(sheet1, connection, sql1, advertiserId, getCommonHeaders(), workbook);
+
+                // G마켓 일자별 통계
+                String sqlGmarket = "SELECT ReportDate AS '구분',Impressions AS '노출수',Clicks AS '클릭수',ClickThroughRate AS '클릭률',AvgImpressionRank AS '평균노출순위',AvgClickCost AS '평균클릭비용',TotalCost AS '총비용',Purchases AS '구매수',PurchaseAmount AS '구매금액',ConversionRate AS '전환율',ReturnOnAdSpend AS '광고수익률' FROM GmarketDatewiseReport" 
+                				  + " WHERE AdvertiserId LIKE ? ;";
+                // G마켓 일자별 통계 SQL 쿼리
+                addDataToSheet2(sheet2, connection, sqlGmarket, advertiserId, getGmarketDatewiseHeaders(), workbook  );
+
+                // 옥션 일자별 통계
+                String sqlAuction = "SELECT ReportDate AS '구분',Impressions AS '노출수',Clicks AS '클릭수',ClickThroughRate AS '클릭률',AvgImpressionRank AS '평균노출순위',AvgClickCost AS '평균클릭비용',TotalCost AS '총비용',Purchases AS '구매수',PurchaseAmount AS '구매금액',ConversionRate AS '전환율',ReturnOnAdSpend AS '광고수익률' FROM AuctionDatewiseReport" 
+      				  			  + " WHERE AdvertiserId LIKE ? ;";
+                addDataToSheet3(sheet3, connection, sqlAuction, advertiserId, getAuctionDatewiseHeaders(), workbook);
+
+                // G마켓 광고상품번호 통계
+                String sqlGmarketProduct = "SELECT Site AS '사이트',AdProductNumber AS '광고상품번호',RelatedProductNumber AS '연관상품번호',Impressions AS '노출수',Clicks AS '클릭수',ClickThroughRate AS '클릭률',AvgImpressionRank AS '평균노출순위',AvgClickCost AS '평균클릭비용',TotalCost AS '총비용',Purchases AS '구매수',PurchaseAmount AS '구매금액',ConversionRate AS '전환율',ReturnOnAdSpend AS '광고수익률' FROM GmarketProductReport"
+                						 + " WHERE AdvertiserId LIKE ? ;";
+                		
+                addDataToSheet4(sheet4, connection, sqlGmarketProduct, advertiserId, getGmarketProductHeaders(), workbook);
+
+                // 옥션 광고상품번호 통계
+                String sqlAuctionProduct = "SELECT Site AS '사이트',AdProductNumber AS '광고상품번호',RelatedProductNumber AS '연관상품번호',Impressions AS '노출수',Clicks AS '클릭수',ClickThroughRate AS '클릭률',AvgImpressionRank AS '평균노출순위',AvgClickCost AS '평균클릭비용',TotalCost AS '총비용',Purchases AS '구매수',PurchaseAmount AS '구매금액',ConversionRate AS '전환율',ReturnOnAdSpend AS '광고수익률' FROM AuctionProductReport"
+						 				 + " WHERE AdvertiserId LIKE ? ;";
+                addDataToSheet5(sheet5, connection, sqlAuctionProduct, advertiserId, getAuctionProductHeaders(), workbook);
+
+                // G마켓 키워드 통계
+                String sqlGmarketKeyword = "SELECT Keyword AS '키워드',Impressions AS '노출수',Clicks AS '클릭수',ClickThroughRate AS '클릭률',AvgImpressionRank AS '평균노출순위',AvgClickCost AS '평균클릭비용',TotalCost AS '총비용',Purchases AS '구매수',PurchaseAmount AS '구매금액',ConversionRate AS '전환율',ReturnOnAdSpend AS '광고수익률' FROM GmarketKeywordReport"
+                						 + " WHERE AdvertiserId LIKE ? ;";
+                addDataToSheet6(sheet6, connection, sqlGmarketKeyword, advertiserId, getGmarketKeywordHeaders(), workbook);
+
+                // 옥션 키워드 통계
+                String sqlAuctionKeyword = "SELECT Keyword AS '키워드',Impressions AS '노출수',Clicks AS '클릭수',ClickThroughRate AS '클릭률',AvgImpressionRank AS '평균노출순위',AvgClickCost AS '평균클릭비용',TotalCost AS '총비용',Purchases AS '구매수',PurchaseAmount AS '구매금액',ConversionRate AS '전환율',ReturnOnAdSpend AS '광고수익률' FROM AuctionKeywordReport"
+						 				 + " WHERE AdvertiserId LIKE ? ;";
+                addDataToSheet7(sheet7, connection, sqlAuctionKeyword, advertiserId, getAuctionKeywordHeaders(), workbook);
+
+                
+                
+                
+                
+
+                try (FileOutputStream outputStream = new FileOutputStream("C:\\Users\\USER\\Desktop\\광고보고서.xlsx")) {
+                    // 엑셀 파일 저장                	
+                	workbook.write(outputStream);
+                    
+                }
+
+            } 
+            
+            catch (Exception e) {
+                e.printStackTrace();
+            
+            } finally {
+                try {
+                    workbook.close();
+                } catch (IOException e) {
+                	
+                	
+                    e.printStackTrace();
+                   
+                    
+                    
+                }
+            }
+        }
+//-----------------------------------------------------------------------------------------------------      
+     
+
+//-----------------------------------------------------------------------------------------------------        
+		public void addTitle01(XSSFSheet sheetImpl, String titleText) {  // css. 추가
+    	    // 시트의 첫 번째 행에 제목을 추가
+    	    XSSFRow row = sheetImpl.createRow(2);  // 첫 번째 행
+    	    XSSFCell cell = row.createCell(1);  // 첫 번째 셀
+    	    cell.setCellValue(titleText);       // 셀에 제목 텍스트 설정
+    	    
+    	    
+    	    // 셀 스타일 설정 (중앙 정렬, 굵게)
+    	    XSSFCellStyle style = sheetImpl.getWorkbook().createCellStyle();
+    	    XSSFFont font = sheetImpl.getWorkbook().createFont();
+    	    font.setBold(true);                 // 글자 굵게 설정
+    	    style.setAlignment(HorizontalAlignment.CENTER); // 중앙 정렬
+    	    style.setFont(font);
+    	    cell.setCellStyle(style);           // 셀에 스타일 적용
+    	    font.setFontHeightInPoints((short) 14);		// 제목 글꼴 크기 설정
+    	    
+    	  
+    	    	
+    	    // 셀 병합 (A1:F1 병합)
+    	    sheetImpl.addMergedRegion(new CellRangeAddress(2, 2, 3, 12));
+    	    
+    	    
+    	    
+    
+    	}
+        
+        public void addTitle02(XSSFSheet sheetImpl02, String titleText) {  // css. 추가
+    	    // 시트의 첫 번째 행에 제목을 추가
+    	    XSSFRow row = sheetImpl02.createRow(1);  // 첫 번째 행
+    	    XSSFCell cell = row.createCell(1);  // 첫 번째 셀
+    	    cell.setCellValue(titleText);       // 셀에 제목 텍스트 설정
+    	    
+    	    
+    	    // 셀 스타일 설정 (중앙 정렬, 굵게)
+    	    XSSFCellStyle style = sheetImpl02.getWorkbook().createCellStyle();
+    	    XSSFFont font = sheetImpl02.getWorkbook().createFont();
+    	    font.setBold(true);                 // 글자 굵게 설정
+    	    style.setAlignment(HorizontalAlignment.CENTER); // 중앙 정렬
+    	    style.setFont(font);
+    	    cell.setCellStyle(style);           // 셀에 스타일 적용
+    	    font.setFontHeightInPoints((short) 14);		// 제목 글꼴 크기 설정
+    	    
+
+    	    // 셀 병합 (A1:F1 병합)
+//    	    sheetImpl02.addMergedRegion(new CellRangeAddress(1, 1, 1, 12));
+    	    
+    	    
+    
+    	    
+    	}
+        
+    
+    	
+        
+
+
+		// G마켓,옥션 일자별 통계			// 여기서 부터 해야함
+        private String[] getCommonHeaders() {
+            return new String[]{"구분", "노출수", "클릭수", "클릭률", "평균클릭비용", "평균노출순위", "구매수", "총비용", "구매금액", "전환율", "광고수익률"};
+        }
+
+        // G마켓 일자별 통계 헤더
+        private String[] getGmarketDatewiseHeaders() {
+            return new String[]{"구분", "노출수", "클릭수", "클릭률", "평균클릭비용", "평균노출순위", "구매수", "총비용", "구매금액", "전환율", "광고수익률"};
+        }
+
+        // 옥션 일자별 통계 헤더
+        private String[] getAuctionDatewiseHeaders() {
+            return new String[]{"구분", "노출수", "클릭수", "클릭률", "평균클릭비용", "평균노출순위", "구매수", "총비용", "구매금액", "전환율", "광고수익률"};
+        }
+
+        // G마켓 광고상품번호 통계 헤더
+        private String[] getGmarketProductHeaders() {
+            return new String[]{"사이트","광고상품번호","노출수","클릭수","클릭률","평균클릭비용","평균노출순위","구매수","총비용","구매금액","전환율","광고수익률"};
+        }
+
+        // 옥션 광고상품번호 통계 헤더
+        private String[] getAuctionProductHeaders() {
+            return new String[]{"사이트","광고상품번호","노출수","클릭수","클릭률","평균클릭비용","평균노출순위","구매수","총비용","구매금액","전환율","광고수익률"};
+        }
+
+        // G마켓 키워드 통계 헤더
+        private String[] getGmarketKeywordHeaders() {
+            return new String[]{"키워드","노출수","클릭수","클릭률","평균클릭비용","평균노출순위","구매수","총비용","구매금액","전환율","광고수익률"};
+        }
+
+        // 옥션 키워드 통계 헤더
+        private String[] getAuctionKeywordHeaders() {
+            return new String[]{"키워드","노출수","클릭수","클릭률","평균클릭비용","평균노출순위","구매수","총비용","구매금액","전환율","광고수익률"};
+        }
+
+        // 시트에 데이터 추가_1번
+        private void addDataToSheet1(XSSFSheet sheet1, Connection connection, String sql, String advertiserId, String[] headers, XSSFWorkbook workbook) throws SQLException {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {			
+                statement.setString(1, advertiserId);
+                ResultSet resultSet = statement.executeQuery();
+ 			
+                addHeaderToSheet1(sheet1, headers);
+                populateSheetWithData1(sheet1, resultSet, workbook);
+              
+            }
+          
+
+            
+        }
+        
+        // 시트에 데이터 추가_2번
+        private void addDataToSheet2(XSSFSheet sheet2, Connection connection, String sql, String advertiserId, String[] headers, XSSFWorkbook workbook) throws SQLException {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {			
+                statement.setString(1, advertiserId);
+                ResultSet resultSet = statement.executeQuery();
+
+                addHeaderToSheet2(sheet2, headers);
+                populateSheetWithData2(sheet2, resultSet, workbook);
+            }
+//            autoSizeColumns(sheet2, headers.length);
+        }
+        
+        
+        // 시트에 데이터 추가_3번
+        private void addDataToSheet3(XSSFSheet sheet3, Connection connection, String sql, String advertiserId, String[] headers, XSSFWorkbook workbook) throws SQLException {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {			
+                statement.setString(1, advertiserId);
+                ResultSet resultSet = statement.executeQuery();
+
+                addHeaderToSheet3(sheet3, headers);
+                populateSheetWithData3(sheet3, resultSet, workbook );
+            }
+//            autoSizeColumns(sheet3, headers.length);
+        }
+        
+        // 시트에 데이터 추가_4번
+        private void addDataToSheet4(XSSFSheet sheet4, Connection connection, String sql, String advertiserId, String[] headers, XSSFWorkbook workbook  ) throws SQLException {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {			
+                statement.setString(1, advertiserId);
+                ResultSet resultSet = statement.executeQuery();
+
+                addHeaderToSheet4(sheet4, headers);
+                populateSheetWithData4(sheet4, resultSet, workbook );
+            }
+//            autoSizeColumns(sheet4, headers.length);
+        }
+        
+        // 시트에 데이터 추가_5번
+        private void addDataToSheet5(XSSFSheet sheet5, Connection connection, String sql, String advertiserId, String[] headers , XSSFWorkbook workbook ) throws SQLException {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {			
+                statement.setString(1, advertiserId);
+                ResultSet resultSet = statement.executeQuery();
+
+                addHeaderToSheet5(sheet5, headers);
+                populateSheetWithData5(sheet5, resultSet, workbook);
+            }
+//            autoSizeColumns(sheet5, headers.length);
+        }
+        
+        // 시트에 데이터 추가_6번
+        private void addDataToSheet6(XSSFSheet sheet6, Connection connection, String sql, String advertiserId, String[] headers, XSSFWorkbook workbook ) throws SQLException {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {			
+                statement.setString(1, advertiserId);
+                ResultSet resultSet = statement.executeQuery();
+
+                addHeaderToSheet6(sheet6, headers);
+                populateSheetWithData6(sheet6, resultSet , workbook);
+            }
+//            autoSizeColumns(sheet6, headers.length);
+        }
+        
+        // 시트에 데이터 추가_7번
+        private void addDataToSheet7(XSSFSheet sheet7, Connection connection, String sql, String advertiserId, String[] headers, XSSFWorkbook workbook ) throws SQLException {
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {			
+                statement.setString(1, advertiserId);
+                ResultSet resultSet = statement.executeQuery();
+
+                addHeaderToSheet7(sheet7, headers);
+                populateSheetWithData7(sheet7, resultSet, workbook );
+            }
+//            autoSizeColumns(sheet7, headers.length);
+        }
+        
+        
+
+        // 시트에 헤더 추가_1번
+        private void addHeaderToSheet1(XSSFSheet sheet1, String[] headers) {
+        	
+            XSSFRow headerRow = sheet1.createRow(3);
+            
+            for (int i = 0; i < headers.length; i++) {
+                
+            	Cell cell = headerRow.createCell(i + 1);	// + 1 으로 제일 왼쪽 1열 건너뛰기
+                
+                cell.setCellValue(headers[i]);
+                
+                XSSFCellStyle headerStyle = sheet1.getWorkbook().createCellStyle();
+                XSSFColor orangeColor = new XSSFColor(new byte[] {(byte) 255, (byte) 204, (byte) 0}, null);
+                headerStyle.setFillForegroundColor(orangeColor);
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                XSSFFont headerFont = sheet1.getWorkbook().createFont();
+                headerFont.setBold(true);
+                headerStyle.setFont(headerFont);
+                cell.setCellStyle(headerStyle);
+                
+                
+//                
+            }
+            
+        }
+
+        
+        
+     // 시트에 헤더 추가_2번
+        private void addHeaderToSheet2(XSSFSheet sheet2, String[] headers) {
+        	XSSFRow headerRow = sheet2.createRow(15);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i + 1);
+                cell.setCellValue(headers[i]);
+                
+                XSSFCellStyle headerStyle = sheet2.getWorkbook().createCellStyle();
+                XSSFColor orangeColor = new XSSFColor(new byte[] {(byte) 255, (byte) 204, (byte) 0}, null);
+                headerStyle.setFillForegroundColor(orangeColor);
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                XSSFFont headerFont = sheet2.getWorkbook().createFont();
+                headerFont.setBold(true);
+                headerStyle.setFont(headerFont);
+                cell.setCellStyle(headerStyle);
+//                autoSizeColumns(sheet2, headers.length);
+            }
+        }
+        
+     // 시트에 헤더 추가_3번
+        private void addHeaderToSheet3(XSSFSheet sheet3, String[] headers) {
+        	XSSFRow headerRow = sheet3.createRow(2);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i + 1);
+                cell.setCellValue(headers[i]);
+                
+                XSSFCellStyle headerStyle = sheet3.getWorkbook().createCellStyle();
+                XSSFColor orangeColor = new XSSFColor(new byte[] {(byte) 255, (byte) 204, (byte) 0}, null);
+                headerStyle.setFillForegroundColor(orangeColor);
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                XSSFFont headerFont = sheet3.getWorkbook().createFont();
+                headerFont.setBold(true);
+                headerStyle.setFont(headerFont);
+                cell.setCellStyle(headerStyle);
+//                autoSizeColumns(sheet3, headers.length);
+            }
+        }
+        
+     // 시트에 헤더 추가_4번
+        private void addHeaderToSheet4(XSSFSheet sheet4, String[] headers) {
+        	XSSFRow headerRow = sheet4.createRow(2);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i + 1);
+                cell.setCellValue(headers[i]);
+                
+                XSSFCellStyle headerStyle = sheet4.getWorkbook().createCellStyle();
+                XSSFColor orangeColor = new XSSFColor(new byte[] {(byte) 255, (byte) 204, (byte) 0}, null);
+                headerStyle.setFillForegroundColor(orangeColor);
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                XSSFFont headerFont = sheet4.getWorkbook().createFont();
+                headerFont.setBold(true);
+                headerStyle.setFont(headerFont);
+                cell.setCellStyle(headerStyle);
+//                autoSizeColumns(sheet4, headers.length);
+            }
+        }
+        
+     // 시트에 헤더 추가_5번
+        private void addHeaderToSheet5(XSSFSheet sheet5, String[] headers) {
+        	XSSFRow headerRow = sheet5.createRow(2);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i + 1);
+                cell.setCellValue(headers[i]);
+                
+                XSSFCellStyle headerStyle = sheet5.getWorkbook().createCellStyle();
+                XSSFColor orangeColor = new XSSFColor(new byte[] {(byte) 255, (byte) 204, (byte) 0}, null);
+                headerStyle.setFillForegroundColor(orangeColor);
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                XSSFFont headerFont = sheet5.getWorkbook().createFont();
+                headerFont.setBold(true);
+                headerStyle.setFont(headerFont);
+                cell.setCellStyle(headerStyle);
+//                autoSizeColumns(sheet5, headers.length);
+            }
+        }
+        
+     // 시트에 헤더 추가_6번
+        private void addHeaderToSheet6(XSSFSheet sheet6, String[] headers) {
+        	XSSFRow headerRow = sheet6.createRow(2);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i + 1);
+                cell.setCellValue(headers[i]);
+                
+                XSSFCellStyle headerStyle = sheet6.getWorkbook().createCellStyle();
+                XSSFColor orangeColor = new XSSFColor(new byte[] {(byte) 255, (byte) 204, (byte) 0}, null);
+                headerStyle.setFillForegroundColor(orangeColor);
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                XSSFFont headerFont = sheet6.getWorkbook().createFont();
+                headerFont.setBold(true);
+                headerStyle.setFont(headerFont);
+                cell.setCellStyle(headerStyle);
+//                autoSizeColumns(sheet6, headers.length);
+            }
+        }
+        
+     // 시트에 헤더 추가_7번
+        private void addHeaderToSheet7(XSSFSheet sheet7, String[] headers) {
+        	XSSFRow headerRow = sheet7.createRow(2);
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i + 1);
+                cell.setCellValue(headers[i]);
+                
+                XSSFCellStyle headerStyle = sheet7.getWorkbook().createCellStyle();
+                XSSFColor orangeColor = new XSSFColor(new byte[] {(byte) 255, (byte) 204, (byte) 0}, null);
+                headerStyle.setFillForegroundColor(orangeColor);
+                headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+                XSSFFont headerFont = sheet7.getWorkbook().createFont();
+                headerFont.setBold(true);
+                headerStyle.setFont(headerFont);
+                cell.setCellStyle(headerStyle);
+//                autoSizeColumns(sheet7, headers.length);
+            }
+        }
+        
+        
+
+        // 시트에 데이터 추가_1번_일자별_G/A 통합
+        private void populateSheetWithData1(Sheet sheet1, ResultSet resultSet, XSSFWorkbook workbook) throws SQLException {
+    int rowNum = 16; // 데이터 행 시작 위치
+
+    // DataFormat 생성
+    DataFormat format = workbook.createDataFormat();
+
+    // 쉼표 형식 (예: 1,000)
+    XSSFCellStyle commaStyle = workbook.createCellStyle();
+    commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+    // 쉼표와 퍼센트 형식 (예: 50.00%)
+    XSSFCellStyle commaPercentStyle = workbook.createCellStyle();
+    commaPercentStyle.setDataFormat(format.getFormat("#,##0.00%"));
+
+    // 쉼표와 일반 소수점 형식 (예: 1,000.00)
+    XSSFCellStyle commaDoubleStyle = workbook.createCellStyle();
+    commaDoubleStyle.setDataFormat(format.getFormat("#,##0.00"));
+
+    while (resultSet.next()) {
+        XSSFRow dataRow = (XSSFRow) sheet1.createRow(rowNum++);
+
+        // 날짜는 문자열로 입력
+        dataRow.createCell(1).setCellValue(resultSet.getDate("구분").toString());
+
+        // 정수형에 쉼표 형식 적용
+        XSSFCell cell2 = dataRow.createCell(2);
+        cell2.setCellValue(resultSet.getInt("노출수"));
+        cell2.setCellStyle(commaStyle);
+
+        XSSFCell cell3 = dataRow.createCell(3);
+        cell3.setCellValue(resultSet.getInt("클릭수"));
+        cell3.setCellStyle(commaStyle);
+
+        // 실수형에 쉼표와 퍼센트 형식 적용
+        XSSFCell cell4 = dataRow.createCell(4);
+        cell4.setCellValue(resultSet.getDouble("클릭률")/ 100); // 값을 100으로 나눔
+        cell4.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+        XSSFCell cell5 = dataRow.createCell(5);
+        cell5.setCellValue(resultSet.getInt("평균클릭비용"));
+        cell5.setCellStyle(commaStyle);
+
+        XSSFCell cell6 = dataRow.createCell(6);
+        cell6.setCellValue(resultSet.getDouble("평균노출순위"));
+        cell6.setCellStyle(commaDoubleStyle); // 소수점 쉼표 형식 적용
+
+        XSSFCell cell7 = dataRow.createCell(7);
+        cell7.setCellValue(resultSet.getInt("구매수"));
+        cell7.setCellStyle(commaStyle);
+
+        XSSFCell cell8 = dataRow.createCell(8);
+        cell8.setCellValue(resultSet.getInt("총비용"));
+        cell8.setCellStyle(commaStyle);
+
+        XSSFCell cell9 = dataRow.createCell(9);
+        cell9.setCellValue(resultSet.getInt("구매금액"));
+        cell9.setCellStyle(commaStyle);
+
+        XSSFCell cell10 = dataRow.createCell(10);
+        cell10.setCellValue(resultSet.getDouble("전환율")/ 100); // 값을 100으로 나눔
+        cell10.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+        XSSFCell cell11 = dataRow.createCell(11);
+        cell11.setCellValue(resultSet.getDouble("광고수익률")/ 100); // 값을 100으로 나눔
+        cell11.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+    }
+ // 각 열의 너비 자동 조정
+    for (int i = 1; i <= 12; i++) { // B열(1)부터 L열(11)까지
+        sheet1.autoSizeColumn(i);
+    }
+}
+
+
+     // 시트에 데이터 추가_2번_일자별_G마켓
+        private void populateSheetWithData2(Sheet sheet2, ResultSet resultSet, XSSFWorkbook workbook) throws SQLException {
+            int rowNum = 3; // 데이터 행 시작 위치
+
+            // DataFormat 생성
+            DataFormat format = workbook.createDataFormat();
+
+            // 쉼표 형식 (예: 1,000)
+            XSSFCellStyle commaStyle = workbook.createCellStyle();
+            commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+            // 쉼표와 퍼센트 형식 (예: 50.00%)
+            XSSFCellStyle commaPercentStyle = workbook.createCellStyle();
+            commaPercentStyle.setDataFormat(format.getFormat("#,##0.00%"));
+
+            // 쉼표와 일반 소수점 형식 (예: 1,000.00)
+            XSSFCellStyle commaDoubleStyle = workbook.createCellStyle();
+            commaDoubleStyle.setDataFormat(format.getFormat("#,##0.00"));
+
+            while (resultSet.next()) {
+                XSSFRow dataRow = (XSSFRow) sheet2.createRow(rowNum++);
+
+                // 날짜는 문자열로 입력
+                dataRow.createCell(1).setCellValue(resultSet.getDate("구분").toString());
+
+                // 정수형에 쉼표 형식 적용
+                XSSFCell cell2 = dataRow.createCell(2);
+                cell2.setCellValue(resultSet.getInt("노출수"));
+                cell2.setCellStyle(commaStyle);
+
+                XSSFCell cell3 = dataRow.createCell(3);
+                cell3.setCellValue(resultSet.getInt("클릭수"));
+                cell3.setCellStyle(commaStyle);
+
+                // 실수형에 쉼표와 퍼센트 형식 적용
+                XSSFCell cell4 = dataRow.createCell(4);
+                cell4.setCellValue(resultSet.getDouble("클릭률") / 100); // 값을 100으로 나눔
+                cell4.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell5 = dataRow.createCell(5);
+                cell5.setCellValue(resultSet.getInt("평균클릭비용"));
+                cell5.setCellStyle(commaStyle);
+
+                XSSFCell cell6 = dataRow.createCell(6);
+                cell6.setCellValue(resultSet.getDouble("평균노출순위"));
+                cell6.setCellStyle(commaDoubleStyle); // 소수점 쉼표 형식 적용
+
+                XSSFCell cell7 = dataRow.createCell(7);
+                cell7.setCellValue(resultSet.getInt("구매수"));
+                cell7.setCellStyle(commaStyle);
+
+                XSSFCell cell8 = dataRow.createCell(8);
+                cell8.setCellValue(resultSet.getInt("총비용"));
+                cell8.setCellStyle(commaStyle);
+
+                XSSFCell cell9 = dataRow.createCell(9);
+                cell9.setCellValue(resultSet.getInt("구매금액"));
+                cell9.setCellStyle(commaStyle);
+
+                XSSFCell cell10 = dataRow.createCell(10);
+                cell10.setCellValue(resultSet.getDouble("전환율") / 100); // 값을 100으로 나눔
+                cell10.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell11 = dataRow.createCell(11);
+                cell11.setCellValue(resultSet.getDouble("광고수익률") / 100); // 값을 100으로 나눔
+                cell11.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+            }
+
+            // 각 열의 너비 자동 조정
+            for (int i = 1; i <= 12; i++) { // B열(1)부터 L열(11)까지
+                sheet2.autoSizeColumn(i);
+            }
+        }
+
+        
+     // 시트에 데이터 추가_3번_일자별_옥션
+        private void populateSheetWithData3(Sheet sheet3, ResultSet resultSet, XSSFWorkbook workbook) throws SQLException {
+            int rowNum = 3; // 데이터 행 시작 위치
+
+            // DataFormat 생성
+            DataFormat format = workbook.createDataFormat();
+
+            // 쉼표 형식 (예: 1,000)
+            XSSFCellStyle commaStyle = workbook.createCellStyle();
+            commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+            // 쉼표와 퍼센트 형식 (예: 50.00%)
+            XSSFCellStyle commaPercentStyle = workbook.createCellStyle();
+            commaPercentStyle.setDataFormat(format.getFormat("#,##0.00%"));
+
+            // 쉼표와 일반 소수점 형식 (예: 1,000.00)
+            XSSFCellStyle commaDoubleStyle = workbook.createCellStyle();
+            commaDoubleStyle.setDataFormat(format.getFormat("#,##0.00"));
+
+            while (resultSet.next()) {
+                XSSFRow dataRow = (XSSFRow) sheet3.createRow(rowNum++);
+
+                // 날짜는 문자열로 입력
+                dataRow.createCell(1).setCellValue(resultSet.getDate("구분").toString());
+
+                // 정수형에 쉼표 형식 적용
+                XSSFCell cell2 = dataRow.createCell(2);
+                cell2.setCellValue(resultSet.getInt("노출수"));
+                cell2.setCellStyle(commaStyle);
+
+                XSSFCell cell3 = dataRow.createCell(3);
+                cell3.setCellValue(resultSet.getInt("클릭수"));
+                cell3.setCellStyle(commaStyle);
+
+                // 실수형에 쉼표와 퍼센트 형식 적용
+                XSSFCell cell4 = dataRow.createCell(4);
+                cell4.setCellValue(resultSet.getDouble("클릭률") / 100); // 값을 100으로 나눔
+                cell4.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell5 = dataRow.createCell(5);
+                cell5.setCellValue(resultSet.getInt("평균클릭비용"));
+                cell5.setCellStyle(commaStyle);
+
+                XSSFCell cell6 = dataRow.createCell(6);
+                cell6.setCellValue(resultSet.getDouble("평균노출순위"));
+                cell6.setCellStyle(commaDoubleStyle); // 소수점 쉼표 형식 적용
+
+                XSSFCell cell7 = dataRow.createCell(7);
+                cell7.setCellValue(resultSet.getInt("구매수"));
+                cell7.setCellStyle(commaStyle);
+
+                XSSFCell cell8 = dataRow.createCell(8);
+                cell8.setCellValue(resultSet.getInt("총비용"));
+                cell8.setCellStyle(commaStyle);
+
+                XSSFCell cell9 = dataRow.createCell(9);
+                cell9.setCellValue(resultSet.getInt("구매금액"));
+                cell9.setCellStyle(commaStyle);
+
+                XSSFCell cell10 = dataRow.createCell(10);
+                cell10.setCellValue(resultSet.getDouble("전환율") / 100); // 값을 100으로 나눔
+                cell10.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell11 = dataRow.createCell(11);
+                cell11.setCellValue(resultSet.getDouble("광고수익률") / 100); // 값을 100으로 나눔
+                cell11.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+            }
+            // 각 열의 너비 자동 조정
+            for (int i = 1; i <= 12; i++) { // B열(1)부터 L열(11)까지
+                sheet3.autoSizeColumn(i);
+            }
+        }
+        // 시트에 데이터 추가_4번_상품별_G마켓
+        private void populateSheetWithData4(Sheet sheet4, ResultSet resultSet, XSSFWorkbook workbook) throws SQLException {
+            int rowNum = 3; // 데이터 행 시작 위치
+            
+            
+            // DataFormat 생성
+            DataFormat format = workbook.createDataFormat();
+
+            // 쉼표 형식 (예: 1,000)
+            XSSFCellStyle commaStyle = workbook.createCellStyle();
+            commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+            // 쉼표와 퍼센트 형식 (예: 50.00%)
+            XSSFCellStyle commaPercentStyle = workbook.createCellStyle();
+            commaPercentStyle.setDataFormat(format.getFormat("#,##0.00%"));
+
+            // 쉼표와 일반 소수점 형식 (예: 1,000.00)
+            XSSFCellStyle commaDoubleStyle = workbook.createCellStyle();
+            commaDoubleStyle.setDataFormat(format.getFormat("#,##0.00"));
+            
+            while (resultSet.next()) {
+            	
+                XSSFRow dataRow = (XSSFRow) sheet4.createRow(rowNum++);
+                dataRow.createCell(1).setCellValue(resultSet.getString("사이트").toString());
+                dataRow.createCell(2).setCellValue(resultSet.getString("광고상품번호"));
+                
+               
+             // 정수형에 쉼표 형식 적용
+                XSSFCell cell3 = dataRow.createCell(3);
+                cell3.setCellValue(resultSet.getInt("노출수"));
+                cell3.setCellStyle(commaStyle);
+
+                XSSFCell cell4 = dataRow.createCell(4);
+                cell4.setCellValue(resultSet.getInt("클릭수"));
+                cell4.setCellStyle(commaStyle);
+               
+                // 실수형에 쉼표와 퍼센트 형식 적용
+                XSSFCell cell5 = dataRow.createCell(5);
+                cell5.setCellValue(resultSet.getDouble("클릭률") / 100); // 값을 100으로 나눔
+                cell5.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+                
+                XSSFCell cell6 = dataRow.createCell(6);
+                cell6.setCellValue(resultSet.getInt("평균클릭비용"));
+                cell6.setCellStyle(commaStyle);
+
+                XSSFCell cell7 = dataRow.createCell(7);
+                cell7.setCellValue(resultSet.getDouble("평균노출순위"));
+                cell7.setCellStyle(commaDoubleStyle); // 소수점 쉼표 형식 적용
+
+                XSSFCell cell8 = dataRow.createCell(8);
+                cell8.setCellValue(resultSet.getInt("구매수"));
+                cell8.setCellStyle(commaStyle);
+
+                XSSFCell cell9 = dataRow.createCell(9);
+                cell9.setCellValue(resultSet.getInt("총비용"));
+                cell9.setCellStyle(commaStyle);
+
+                XSSFCell cell10 = dataRow.createCell(10);
+                cell10.setCellValue(resultSet.getInt("구매금액"));
+                cell10.setCellStyle(commaStyle);
+
+                XSSFCell cell11 = dataRow.createCell(11);
+                cell11.setCellValue(resultSet.getDouble("전환율") / 100); // 값을 100으로 나눔
+                cell11.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell12 = dataRow.createCell(12);
+                cell12.setCellValue(resultSet.getDouble("광고수익률") / 100); // 값을 100으로 나눔
+                cell12.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+            }
+            // 각 열의 너비 자동 조정
+            for (int i = 1; i <= 13; i++) { // B열(1)부터 L열(13)까지
+                sheet4.autoSizeColumn(i);
+            }
+        }
+     // 시트에 데이터 추가_5번_상품별_옥션
+        private void populateSheetWithData5(Sheet sheet5, ResultSet resultSet, XSSFWorkbook workbook) throws SQLException {
+            int rowNum = 3; // 데이터 행 시작 위치
+            
+            // DataFormat 생성
+            DataFormat format = workbook.createDataFormat();
+
+            // 쉼표 형식 (예: 1,000)
+            XSSFCellStyle commaStyle = workbook.createCellStyle();
+            commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+            // 쉼표와 퍼센트 형식 (예: 50.00%)
+            XSSFCellStyle commaPercentStyle = workbook.createCellStyle();
+            commaPercentStyle.setDataFormat(format.getFormat("#,##0.00%"));
+
+            // 쉼표와 일반 소수점 형식 (예: 1,000.00)
+            XSSFCellStyle commaDoubleStyle = workbook.createCellStyle();
+            commaDoubleStyle.setDataFormat(format.getFormat("#,##0.00"));
+            
+            while (resultSet.next()) {
+                XSSFRow dataRow = (XSSFRow) sheet5.createRow(rowNum++);
+                dataRow.createCell(1).setCellValue(resultSet.getString("사이트").toString());
+                dataRow.createCell(2).setCellValue(resultSet.getString("광고상품번호"));
+                
+                // 정수형에 쉼표 형식 적용
+                XSSFCell cell3 = dataRow.createCell(3);
+                cell3.setCellValue(resultSet.getInt("노출수"));
+                cell3.setCellStyle(commaStyle);
+
+                XSSFCell cell4 = dataRow.createCell(4);
+                cell4.setCellValue(resultSet.getInt("클릭수"));
+                cell4.setCellStyle(commaStyle);
+
+                // 실수형에 쉼표와 퍼센트 형식 적용
+                XSSFCell cell5 = dataRow.createCell(5);
+                cell5.setCellValue(resultSet.getDouble("클릭률") / 100); // 값을 100으로 나눔
+                cell5.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell6 = dataRow.createCell(6);
+                cell6.setCellValue(resultSet.getInt("평균클릭비용"));
+                cell6.setCellStyle(commaStyle);
+
+                XSSFCell cell7 = dataRow.createCell(7);
+                cell7.setCellValue(resultSet.getDouble("평균노출순위"));
+                cell7.setCellStyle(commaDoubleStyle); // 소수점 쉼표 형식 적용
+
+                XSSFCell cell8 = dataRow.createCell(8);
+                cell8.setCellValue(resultSet.getInt("구매수"));
+                cell8.setCellStyle(commaStyle);
+
+                XSSFCell cell9 = dataRow.createCell(9);
+                cell9.setCellValue(resultSet.getInt("총비용"));
+                cell9.setCellStyle(commaStyle);
+
+                XSSFCell cell10 = dataRow.createCell(10);
+                cell10.setCellValue(resultSet.getInt("구매금액"));
+                cell10.setCellStyle(commaStyle);
+
+                XSSFCell cell11 = dataRow.createCell(11);
+                cell11.setCellValue(resultSet.getDouble("전환율") / 100); // 값을 100으로 나눔
+                cell11.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell12 = dataRow.createCell(12);
+                cell12.setCellValue(resultSet.getDouble("광고수익률") / 100); // 값을 100으로 나눔
+                cell12.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+            }
+            // 각 열의 너비 자동 조정
+            for (int i = 1; i <= 13; i++) { // B열(1)부터 L열(13)까지
+                sheet5.autoSizeColumn(i);
+            }
+        }
+
+        // 시트에 데이터 추가_6번_키워드별_G마켓
+        private void populateSheetWithData6(Sheet sheet6, ResultSet resultSet , XSSFWorkbook workbook) throws SQLException {
+            int rowNum = 3; // 데이터 행 시작 위치
+            // DataFormat 생성
+            DataFormat format = workbook.createDataFormat();
+
+            // 쉼표 형식 (예: 1,000)
+            XSSFCellStyle commaStyle = workbook.createCellStyle();
+            commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+            // 쉼표와 퍼센트 형식 (예: 50.00%)
+            XSSFCellStyle commaPercentStyle = workbook.createCellStyle();
+            commaPercentStyle.setDataFormat(format.getFormat("#,##0.00%"));
+
+            // 쉼표와 일반 소수점 형식 (예: 1,000.00)
+            XSSFCellStyle commaDoubleStyle = workbook.createCellStyle();
+            commaDoubleStyle.setDataFormat(format.getFormat("#,##0.00"));
+            
+            while (resultSet.next()) {
+                XSSFRow dataRow = (XSSFRow)sheet6.createRow(rowNum++);
+                dataRow.createCell(1).setCellValue(resultSet.getString("키워드").toString());
+                
+             // 정수형에 쉼표 형식 적용
+                XSSFCell cell2 = dataRow.createCell(2);
+                cell2.setCellValue(resultSet.getInt("노출수"));
+                cell2.setCellStyle(commaStyle);
+
+                XSSFCell cell3 = dataRow.createCell(3);
+                cell3.setCellValue(resultSet.getInt("클릭수"));
+                cell3.setCellStyle(commaStyle);
+                
+                // 실수형에 쉼표와 퍼센트 형식 적용
+                XSSFCell cell4 = dataRow.createCell(4);
+                cell4.setCellValue(resultSet.getDouble("클릭률") / 100); // 값을 100으로 나눔
+                cell4.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell5 = dataRow.createCell(5);
+                cell5.setCellValue(resultSet.getInt("평균클릭비용"));
+                cell5.setCellStyle(commaStyle);
+
+                XSSFCell cell6 = dataRow.createCell(6);
+                cell6.setCellValue(resultSet.getDouble("평균노출순위"));
+                cell6.setCellStyle(commaDoubleStyle); // 소수점 쉼표 형식 적용
+
+                XSSFCell cell7 = dataRow.createCell(7);
+                cell7.setCellValue(resultSet.getInt("구매수"));
+                cell7.setCellStyle(commaStyle);
+
+                XSSFCell cell8 = dataRow.createCell(8);
+                cell8.setCellValue(resultSet.getInt("총비용"));
+                cell8.setCellStyle(commaStyle);
+
+                XSSFCell cell9 = dataRow.createCell(9);
+                cell9.setCellValue(resultSet.getInt("구매금액"));
+                cell9.setCellStyle(commaStyle);
+
+                XSSFCell cell10 = dataRow.createCell(10);
+                cell10.setCellValue(resultSet.getDouble("전환율") / 100); // 값을 100으로 나눔
+                cell10.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell11 = dataRow.createCell(11);
+                cell11.setCellValue(resultSet.getDouble("광고수익률") / 100); // 값을 100으로 나눔
+                cell11.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+            }
+            // 각 열의 너비 자동 조정
+            for (int i = 1; i <= 13; i++) { // B열(1)부터 L열(13)까지
+                sheet6.autoSizeColumn(i);
+            }
+        }
+        
+        
+        // 시트에 데이터 추가_7번_키워드별_옥션
+        private void populateSheetWithData7(Sheet sheet7, ResultSet resultSet , XSSFWorkbook workbook) throws SQLException {
+            int rowNum = 3; // 데이터 행 시작 위치
+         // DataFormat 생성
+            DataFormat format = workbook.createDataFormat();
+
+            // 쉼표 형식 (예: 1,000)
+            XSSFCellStyle commaStyle = workbook.createCellStyle();
+            commaStyle.setDataFormat(format.getFormat("#,##0"));
+
+            // 쉼표와 퍼센트 형식 (예: 50.00%)
+            XSSFCellStyle commaPercentStyle = workbook.createCellStyle();
+            commaPercentStyle.setDataFormat(format.getFormat("#,##0.00%"));
+
+            // 쉼표와 일반 소수점 형식 (예: 1,000.00)
+            XSSFCellStyle commaDoubleStyle = workbook.createCellStyle();
+            commaDoubleStyle.setDataFormat(format.getFormat("#,##0.00"));
+            
+            while (resultSet.next()) {
+                XSSFRow dataRow = (XSSFRow)sheet7.createRow(rowNum++);
+                dataRow.createCell(1).setCellValue(resultSet.getString("키워드").toString());
+                
+             // 정수형에 쉼표 형식 적용
+                XSSFCell cell2 = dataRow.createCell(2);
+                cell2.setCellValue(resultSet.getInt("노출수"));
+                cell2.setCellStyle(commaStyle);
+
+                XSSFCell cell3 = dataRow.createCell(3);
+                cell3.setCellValue(resultSet.getInt("클릭수"));
+                cell3.setCellStyle(commaStyle);
+                
+                // 실수형에 쉼표와 퍼센트 형식 적용
+                XSSFCell cell4 = dataRow.createCell(4);
+                cell4.setCellValue(resultSet.getDouble("클릭률") / 100); // 값을 100으로 나눔
+                cell4.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell5 = dataRow.createCell(5);
+                cell5.setCellValue(resultSet.getInt("평균클릭비용"));
+                cell5.setCellStyle(commaStyle);
+
+                XSSFCell cell6 = dataRow.createCell(6);
+                cell6.setCellValue(resultSet.getDouble("평균노출순위"));
+                cell6.setCellStyle(commaDoubleStyle); // 소수점 쉼표 형식 적용
+
+                XSSFCell cell7 = dataRow.createCell(7);
+                cell7.setCellValue(resultSet.getInt("구매수"));
+                cell7.setCellStyle(commaStyle);
+
+                XSSFCell cell8 = dataRow.createCell(8);
+                cell8.setCellValue(resultSet.getInt("총비용"));
+                cell8.setCellStyle(commaStyle);
+
+                XSSFCell cell9 = dataRow.createCell(9);
+                cell9.setCellValue(resultSet.getInt("구매금액"));
+                cell9.setCellStyle(commaStyle);
+
+                XSSFCell cell10 = dataRow.createCell(10);
+                cell10.setCellValue(resultSet.getDouble("전환율") / 100); // 값을 100으로 나눔
+                cell10.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+
+                XSSFCell cell11 = dataRow.createCell(11);
+                cell11.setCellValue(resultSet.getDouble("광고수익률") / 100); // 값을 100으로 나눔
+                cell11.setCellStyle(commaPercentStyle); // 퍼센트 형식 적용
+            }
+            // 각 열의 너비 자동 조정
+            for (int i = 1; i <= 13; i++) { // B열(1)부터 L열(13)까지
+                sheet7.autoSizeColumn(i);
+            }
+        }
+        
+//        public void addTitle(XSSFSheet sheet1, String titleText) {
+//            // 시트의 첫 번째 행에 제목을 추가
+//            XSSFRow row = sheet1.createRow(0);  // 첫 번째 행
+//            XSSFCell cell = row.createCell(0);  // 첫 번째 셀
+//            cell.setCellValue(titleText);       // 셀에 제목 텍스트 설정
+//            
+//            // 셀 스타일 설정 (중앙 정렬, 굵게)
+//            XSSFCellStyle style = sheet1.getWorkbook().createCellStyle();
+//            XSSFFont font = sheet1.getWorkbook().createFont();
+//            font.setBold(true);                 // 글자 굵게 설정
+//            style.setAlignment(HorizontalAlignment.CENTER); // 중앙 정렬
+//            style.setFont(font);
+//            cell.setCellStyle(style);           // 셀에 스타일 적용
+//            sheet1.addMergedRegion(new CellRangeAddress(0, 0, 0, 5));
+//        }
+//       
+        
+//        private void autoSizeColumns(XSSFSheet sheetAutoSize, int numberOfColumns) {
+//            for (int i = 0; i < numberOfColumns; i++) {
+//            	sheetAutoSize.autoSizeColumn(i);  // 각 열의 너비를 자동으로 조정
+//            }
+//        }
+//       
+        
+        
+        
+        
+        
+            
+        }
+        
+        
+      
+    
+    	

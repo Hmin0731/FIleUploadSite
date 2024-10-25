@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<section name="org.eclipse.ui.texteditor.FindReplaceDialog">
+		<item key="selection" value="데이터 추가"/>
+		<item key="casesensitive" value="false"/>
+		<item key="wholeword" value="false"/>
+		<item key="isRegEx" value="false"/>
+		<list key="findhistory">
+			<item value="데이터 추가"/>
+			<item value="addDataToSheet1"/>
+			<item value="addHeaderToSheet1"/>
+			<item value="populateSheetWithData7"/>
+			<item value="populateSheetWithData5"/>
+			<item value="startRow"/>
+			<item value="열너비"/>
+			<item value="ShapeProperties"/>
+		</list>
+		<list key="replacehistory">
+			<item value="22, 26,"/>
+			<item value="int rowNum = 2"/>
+			<item value=","/>
+			<item value="div"/>
+		</list>
+	</section>
+</section>

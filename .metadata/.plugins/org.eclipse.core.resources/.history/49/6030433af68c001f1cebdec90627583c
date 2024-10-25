@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Excel File</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js 라이브러리 -->
+     <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #chartContainer {
+            width: 80%;
+            margin: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Excel File을 업로드 해주세요.</h1>
+    
+    <form action="/upload" method="post" enctype="multipart/form-data">
+    	<p>광고주 ID를 입력하세요.&nbsp;&nbsp;&nbsp;&nbsp;<input type="text" name="advertiserId"  ></p>
+    	
+        <div><b>G마켓_상품별 파일을 선택해주세요.<input type="file" name="filesFolder1" accept=".xls,.xlsx" multipart required></b></div><p></p>
+        <div><b>G마켓_일자별 파일을 선택해주세요.<input type="file" name="filesFolder2" accept=".xls,.xlsx" multipart required></b></div><p></p>
+        <div><b>G마켓 키워드 별 파일을 선택해주세요.<input type="file" name="filesFolder3" accept=".xls,.xlsx" multipart required></b></div><p></p>
+        <div><b>옥션_상품별 파일을 선택해주세요.<input type="file" name="filesFolder4" accept=".xls,.xlsx" multipart required></b></div><p></p>
+		<div><b>옥션_일자별 파일을 선택해주세요.<input type="file" name="filesFolder5" accept=".xls,.xlsx" multipart required></b></div><p></p>
+       	<div><b>옥션 키워드 별 파일을 선택해주세요.<input type="file" name="filesFolder6" accept=".xls,.xlsx" multipart required></b></div>	<p></p>
+        <button type="submit"><h4> Upload </h4></button>
+    </form>
+    
+    
+    <form action="/report/generate" method="get">
+        <label for="advertiserId">광고주 ID:</label>
+        <input type="text" id="advertiserId" name="advertiserId" required>
+        <button type="submit">업로드 파일 분석하기</button>
+    </form>
+    
+    <p th:text="${message}">
+    <p>사용순서 : 
+    1. 광고주 ID 입력 후 파일 선택하여 해당 파일을 찾아  업로드
+  	2. 6개의 모든파일이 업로드 되었다면 하단 Upload 클릭
+  	-- 데이터베이스에 저장.   	
+  	-- ex) "samsung1234_12월보고서"  
+	3. 다운로드 시 광고주 ID 입력 후 "업로드 파일 분석하기" 클릭 </p>   
+    
+    </body>
+    
+</html>
+
+
+

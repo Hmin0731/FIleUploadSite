@@ -1,0 +1,8 @@
+package com.example.file_upload_site.service;
+
+
+
+public void DeleteService(String advertiserId) {
+    String sql = "DELETE FROM your_table_name WHERE advertiser_id = ?";
+    jdbcTemplate.update(sql, advertiserId);
+}

@@ -1,0 +1,5 @@
+package com.example.file_upload_site.controller;
+
+public class DeleteController {
+
+}

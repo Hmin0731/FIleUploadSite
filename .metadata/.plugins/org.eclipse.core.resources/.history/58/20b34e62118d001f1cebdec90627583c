@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Excel File</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js 라이브러리 -->
+     <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #chartContainer {
+            width: 80%;
+            margin: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Excel File을 업로드 해주세요.</h1>
+    
+    <form action="/upload" method="get" >
+    	
+        <button type="reset"><h4> home 복귀 </h4></button>
+    </form>
+    
+        
+    
+    
+    
+    <p th:text="${message}"></p>
+    
+    </body>
+    
+</html>
+
+

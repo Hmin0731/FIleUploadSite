@@ -1,0 +1,17 @@
+package com.example.file_upload_site.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DeleteService {
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    public void deleteDataByAdvertiserId(String advertiserId) {
+        String sql = "DELETE FROM your_table_name WHERE advertiser_id = ?";
+        jdbcTemplate.update(sql, advertiserId);
+    }
+}
